@@ -11,7 +11,7 @@ def create_zip_excluding_config_and_self():
     zip_filename = f"{dir_name}.zip"
     
     # 定义要排除的文件夹和文件
-    exclude_folders = ['config']
+    exclude_folders = ['config', '.git', 'APKs', 'local_repo']  # 添加了.git目录
     script_name = os.path.basename(__file__)  # 获取当前脚本文件名
     
     # 如果zip文件已存在，先删除
@@ -39,7 +39,7 @@ def create_zip_excluding_config_and_self():
                 if file == zip_filename:
                     continue
                 
-                # 排除config文件夹中的文件（双重保险）
+                # 排除指定文件夹中的文件（双重保险）
                 if any(exclude_folder in file_path.split(os.sep) for exclude_folder in exclude_folders):
                     continue
                 

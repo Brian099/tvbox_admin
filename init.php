@@ -55,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 					id INT AUTO_INCREMENT PRIMARY KEY,
 					ServerName VARCHAR(255) UNIQUE NOT NULL,
 					repos LONGTEXT NOT NULL,
+					attach_local TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否附加本地资源',
 					created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 					updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -69,6 +70,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             ");
+			
+			$pdo->exec("
+			CREATE TABLE IF NOT EXISTS repos (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				name VARCHAR(255) NOT NULL UNIQUE,
+				url TEXT NOT NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+			");
+			
+			$pdo->exec("
+			CREATE TABLE local_files (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				filename VARCHAR(255) UNIQUE NOT NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+			");
 
             // 插入初始管理员
             $passwordHash = password_hash($adminPass, PASSWORD_BCRYPT);
@@ -85,7 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!is_dir(__DIR__.'/config')) mkdir(__DIR__.'/config', 0755, true);
             file_put_contents(__DIR__.'/config/config.php', $configContent);
-
+			
+			if (!is_dir("local_repo")) {mkdir("local_repo", 0755, true);}
             // 初始化完成后直接跳转 index.php
             header("Location: download.php");
             exit;

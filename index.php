@@ -116,8 +116,6 @@ $totalPages = ceil($total / $perPage);
 <title>用户管理</title>
 <style>
 /* 保留原样式 */
-body { font-family: "Segoe UI", Arial, sans-serif; margin: 30px; background:#f9fafc; color:#333; }
-h2 { margin-bottom: 20px; color:#2c3e50; }
 input[type=text], input[type=date], select { padding:8px; border-radius:5px; border:1px solid #ccc; width:160px; box-sizing:border-box; }
 button, .btn { padding:6px 12px; border-radius:6px; border:none; cursor:pointer; font-size:13px; margin:2px; text-decoration: none; }
 button:hover, .btn:hover { opacity:0.9; }
@@ -137,7 +135,7 @@ tr:hover { background:#f9f9f9; }
 </style>
 </head>
 <body>
-<h2>📋 用户管理 | <a href="edit_repo.php">编辑多仓 </a> | <a href="download.php">下载应用 </a></h2>
+<?php include "header.php"; ?>
 <a class="btn btn-red logout" href="?action=logout">✈ 退出登录</a>
 
 <form class="search-form" method="get">
