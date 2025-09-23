@@ -63,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // 创建表 users
             $pdo->exec("
-                CREATE TABLE IF NOT EXISTS users (
+                CREATE TABLE users (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     username VARCHAR(100) NOT NULL UNIQUE,
                     password VARCHAR(255) NOT NULL,
@@ -72,10 +72,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ");
 			
 			$pdo->exec("
-			CREATE TABLE IF NOT EXISTS repos (
+			CREATE TABLE repos (
 				id INT AUTO_INCREMENT PRIMARY KEY,
 				name VARCHAR(255) NOT NULL UNIQUE,
 				url TEXT NOT NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+			");
+			
+			$pdo->exec("
+			CREATE TABLE lives (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				name VARCHAR(255) NOT NULL UNIQUE,
+				url TEXT NOT NULL,
+				ua TEXT NOT NULL,
 				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

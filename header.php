@@ -7,7 +7,8 @@ h2 a{text-decoration: none;}
 <a href="index.php">用户管理 </a> | 
 <a href="edit_repo_group.php">编辑多仓 </a> | 
 <a href="edit_repos.php">仓库管理 </a>| 
-<a href="local_repo.php">本地源 </a>| 
+<a href="local_repo.php">本地仓 </a>| 
+<a href="edit_lives.php">直播源 </a>| 
 <a href="download.php">下载应用 </a>
 </h2>
 <hr>
