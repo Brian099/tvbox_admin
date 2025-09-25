@@ -67,8 +67,9 @@ $allRepos = $stmt->fetchAll(PDO::FETCH_COLUMN);
 $editFile = isset($_GET['edit']) ? trim($_GET['edit']) : '';
 $currentRepos = [];
 $attachLocal = 0;
+$attachLive = 0;  // ✅ 新增变量
 if ($editFile !== '') {
-    $stmt = $pdo->prepare("SELECT repos, attach_local FROM duocang_data WHERE ServerName=:ServerName LIMIT 1");
+    $stmt = $pdo->prepare("SELECT repos, attach_local, attach_live FROM duocang_data WHERE ServerName=:ServerName LIMIT 1");
     $stmt->execute([':ServerName'=>$editFile]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if ($row) {
@@ -76,6 +77,7 @@ if ($editFile !== '') {
             $currentRepos = array_filter(explode(';', $row['repos']));
         }
         $attachLocal = (int)$row['attach_local'];
+        $attachLive  = (int)$row['attach_live']; // ✅ 读取 attach_live
     }
 }
 
@@ -88,17 +90,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_group'], $_POST[
     if ($reposList !== '') $reposList .= ';';
 
     $attachLocalPost = isset($_POST['attach_local']) ? 1 : 0;
+    $attachLivePost  = isset($_POST['attach_live']) ? 1 : 0; // ✅ 新增
 
-    $stmt = $pdo->prepare("UPDATE duocang_data SET repos=:repos, attach_local=:attach_local WHERE ServerName=:ServerName");
+    $stmt = $pdo->prepare("UPDATE duocang_data SET repos=:repos, attach_local=:attach_local, attach_live=:attach_live WHERE ServerName=:ServerName");
     $stmt->execute([
         ':repos' => $reposList,
         ':attach_local' => $attachLocalPost,
+        ':attach_live'  => $attachLivePost, // ✅ 新增
         ':ServerName' => $editFilePost
     ]);
 
     $saveMessage = "✅ 保存成功";
     $currentRepos = $reposSelected;
     $attachLocal = $attachLocalPost;
+    $attachLive  = $attachLivePost;
 }
 ?>
 <!DOCTYPE html>
@@ -134,7 +139,6 @@ document.addEventListener('DOMContentLoaded', function(){
         new Sortable(el, {
             animation: 150,
             onEnd: function () {
-                // 拖拽结束后重新排列隐藏 input
                 var items = el.querySelectorAll('input[type=checkbox]');
                 var form = el.closest('form');
                 var reposContainer = form.querySelector('input[name=repos_order]');
@@ -183,7 +187,6 @@ document.addEventListener('DOMContentLoaded', function(){
         <div class="repo-list">
             <ul id="sortable-list" class="sortable">
             <?php
-            // 已勾选的按数据库顺序显示
             $sortedRepos = $currentRepos;
             $uncheckedRepos = array_diff($allRepos, $currentRepos);
             $finalRepos = array_merge($sortedRepos, $uncheckedRepos);
@@ -203,6 +206,12 @@ document.addEventListener('DOMContentLoaded', function(){
             <label>
                 <input type="checkbox" name="attach_local" value="1" <?=$attachLocal ? 'checked' : ''?>>
                 附加本地资源
+            </label>
+        </div>
+        <div style="margin-top:10px;"> <!-- ✅ 新增 -->
+            <label>
+                <input type="checkbox" name="attach_live" value="1" <?=$attachLive ? 'checked' : ''?>>
+                附加专用直播源
             </label>
         </div>
         <br>

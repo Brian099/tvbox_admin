@@ -207,6 +207,8 @@ tr:hover { background:#f9f9f9; }
     总用户数：<?=$total?><br>
     已过期用户数：<?=$expiredCount?>
 </div>
-
+测试：
+<a href="api.php?package_name=com.fongmi.android.tv&device_id=123456789" target="_block">授权</a>
+<a href="notice.php?device_id=123456789" target="_block">通知</a>
 </body>
 </html>
