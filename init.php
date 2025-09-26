@@ -20,8 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $adminUser = trim($_POST['admin_user']);
     $adminPass = trim($_POST['admin_pass']);
     $adminPassConfirm = trim($_POST['admin_pass_confirm']);
+    $domain = trim($_POST['domain']); // 新增域名字段
 
-    if (!$dbHost || !$dbUser || !$dbName || !$adminUser || !$adminPass || !$adminPassConfirm) {
+    if (!$dbHost || !$dbUser || !$dbName || !$adminUser || !$adminPass || !$adminPassConfirm || !$domain) {
         $error = "请填写完整信息";
     } elseif ($adminPass !== $adminPassConfirm) {
         $error = "两次输入的初始管理员密码不一致";
@@ -106,12 +107,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("INSERT INTO users (username, password) VALUES (:username, :password)");
             $stmt->execute(array(':username'=>$adminUser, ':password'=>$passwordHash));
 
-            // 写入 config 文件
+            // 写入 config 文件 - 新增域名base64编码
+            $domainBase64 = base64_encode($domain);
             $configContent = "<?php\nreturn array(\n"
                 . "    'db_host' => '".addslashes($dbHost)."',\n"
                 . "    'db_user' => '".addslashes($dbUser)."',\n"
                 . "    'db_pass' => '".addslashes($dbPass)."',\n"
-                . "    'db_name' => '".addslashes($dbName)."'\n"
+                . "    'db_name' => '".addslashes($dbName)."',\n"
+                . "    'domain' => '".addslashes($domainBase64)."' // 域名base64编码\n"
                 . ");\n";
 
             if (!is_dir(__DIR__.'/config')) mkdir(__DIR__.'/config', 0755, true);
@@ -156,6 +159,7 @@ button:hover { opacity:0.9; }
 <input type="password" name="db_pass" placeholder="数据库密码" value="<?php echo isset($_POST['db_pass'])?htmlspecialchars($_POST['db_pass']):''; ?>">
 <input type="text" name="db_name" placeholder="数据库名称" value="<?php echo isset($_POST['db_name'])?htmlspecialchars($_POST['db_name']):''; ?>" required>
 <hr>
+<input type="text" name="domain" placeholder="系统域名（如：http://example.com）" value="<?php echo isset($_POST['domain'])?htmlspecialchars($_POST['domain']):''; ?>" required>
 <input type="text" name="admin_user" placeholder="初始管理员用户名" value="<?php echo isset($_POST['admin_user'])?htmlspecialchars($_POST['admin_user']):'admin'; ?>" required>
 <input type="password" name="admin_pass" placeholder="初始管理员密码" required>
 <input type="password" name="admin_pass_confirm" placeholder="确认管理员密码" required>

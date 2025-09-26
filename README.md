@@ -6,7 +6,7 @@ a source and user manage system for customized Tvbox
 - [x] 对id设置备注
 - [x] 对id设置授权时间和授权模板
 - [x] 通过ID获得不同的json
-- [x] 支持base64方式给客户端传输数据
+- [x] 支持多次混淆的方式给客户端传输数据
 - [x] 通过授权时间获得不同的通知
 - [x] 增加多个点播源
 - [x] 增加多个直播源
