@@ -207,8 +207,37 @@ tr:hover { background:#f9f9f9; }
     总用户数：<?=$total?><br>
     已过期用户数：<?=$expiredCount?>
 </div>
-测试：
-<a href="api.php?package_name=com.fongmi.android.tv&device_id=123456789" target="_block">授权</a>
-<a href="notice.php?device_id=123456789" target="_block">通知</a>
+
+<hr>
+
+<!-- 测试区 -->
+<div style="margin-top:20px; padding:15px; background:#fff; border-radius:6px; box-shadow:0 1px 5px rgba(0,0,0,0.1);">
+    <strong>🔧 测试：</strong><br><br>
+    <form id="testForm" onsubmit="return false;">
+        <input type="text" id="testDeviceId" placeholder="请输入 Device ID" style="padding:8px; width:200px; border-radius:6px; border:1px solid #ccc;">
+        <button type="button" class="btn btn-blue" onclick="openApi()">测试授权</button>
+        <button type="button" class="btn btn-green" onclick="openNotice()">测试通知</button>
+    </form>
+</div>
+
+<script>
+function openApi() {
+    var id = document.getElementById('testDeviceId').value.trim();
+    if (!id) {
+        alert("请输入 Device ID");
+        return;
+    }
+    window.open("api.php?package_name=com.fongmi.android.tv&device_id=" + encodeURIComponent(id), "_blank");
+}
+function openNotice() {
+    var id = document.getElementById('testDeviceId').value.trim();
+    if (!id) {
+        alert("请输入 Device ID");
+        return;
+    }
+    window.open("notice.php?device_id=" + encodeURIComponent(id), "_blank");
+}
+</script>
+
 </body>
 </html>

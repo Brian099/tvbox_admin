@@ -13,5 +13,5 @@ a source and user manage system for customized Tvbox
 - [x] 点播源可复合本地源
 - [x] 直播源复合
 - [x] 系统安装
-- [ ] 系统删除
+- [x] 系统删除
 
