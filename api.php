@@ -156,7 +156,10 @@ if ($serverFile !== '') {
     }
 
     // 输出最终合并后的 urls（保持原有格式）
-    echo json_encode(['urls' => $result], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	$data = json_encode(['urls' => $result], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	$prefix = substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'), 0, 8);
+	$base64 = base64_encode($data);
+	echo $prefix . '**' . $base64;
     exit;
 } else {
     echo json_encode([
