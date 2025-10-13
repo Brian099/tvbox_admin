@@ -100,7 +100,7 @@ input[type="password"] { width:100%; padding:10px; margin:10px 0 20px; border-ra
 <form method="post" onsubmit="return confirm('确定要卸载系统吗？此操作不可恢复！');">
     <input type="password" name="db_pass" placeholder="请输入数据库密码进行确认" required>
     <label><input type="checkbox" name="delete_db"> 删除整个数据库 (<?php echo htmlspecialchars($dbName); ?>)</label>
-    <label><input type="checkbox" name="delete_repo"> 删除 local_repo 目录</label>
+    <label><input type="checkbox" name="delete_repo"> 删除 local_repo 目录（本地仓）</label>
     <button type="submit">确认卸载</button>
 </form>
 <?php elseif(!$dbName): ?>

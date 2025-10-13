@@ -14,6 +14,28 @@ def create_zip_excluding_config_and_self():
     exclude_folders = ['config', '.git', 'APKs', 'local_repo']  # 添加了.git目录
     script_name = os.path.basename(__file__)  # 获取当前脚本文件名
     
+    # 第一步：删除所有包含 .log 的文件
+    print("正在扫描并删除 .log 文件...")
+    log_files_found = False
+    
+    for root, dirs, files in os.walk(current_dir):
+        # 排除指定的文件夹
+        dirs[:] = [d for d in dirs if d not in exclude_folders]
+        
+        for file in files:
+            if '.log' in file.lower():
+                file_path = os.path.join(root, file)
+                try:
+                    os.remove(file_path)
+                    print(f'已删除: {file_path}')
+                    log_files_found = True
+                except Exception as e:
+                    print(f'删除失败 {file_path}: {e}')
+    
+    if not log_files_found:
+        print("未找到 .log 文件")
+    print()
+    
     # 如果zip文件已存在，先删除
     if os.path.exists(zip_filename):
         os.remove(zip_filename)

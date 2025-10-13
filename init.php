@@ -101,24 +101,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 			");
+			
+			$pdo->exec("
+			CREATE TABLE local_repos (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				name VARCHAR(255) NOT NULL UNIQUE,
+				repos_local VARCHAR(255) UNIQUE NOT NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+			");
+			
+			$pdo->exec("
+			CREATE TABLE emby (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				SERVER_NAME VARCHAR(255) NOT NULL,
+				EMBY_SERVER VARCHAR(255) NOT NULL,
+				EMBY_USERNAME VARCHAR(255) NOT NULL,
+				EMBY_PASSWORD VARCHAR(255) NOT NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+			");
 
             // 插入初始管理员
             $passwordHash = password_hash($adminPass, PASSWORD_BCRYPT);
             $stmt = $pdo->prepare("INSERT INTO users (username, password) VALUES (:username, :password)");
             $stmt->execute(array(':username'=>$adminUser, ':password'=>$passwordHash));
 
-            // 写入 config 文件 - 新增域名base64编码
-            $domainBase64 = base64_encode($domain);
-            $configContent = "<?php\nreturn array(\n"
-                . "    'db_host' => '".addslashes($dbHost)."',\n"
-                . "    'db_user' => '".addslashes($dbUser)."',\n"
-                . "    'db_pass' => '".addslashes($dbPass)."',\n"
-                . "    'db_name' => '".addslashes($dbName)."',\n"
-                . "    'domain' => '".addslashes($domainBase64)."' // 域名base64编码\n"
-                . ");\n";
+         // 写入 config 文件 - 新增域名base64编码
+			$domainBase64 = base64_encode($domain);
+			$configContent = "<?php\nreturn array(\n"
+				. "    'db_host' => '".addslashes($dbHost)."',\n"
+				. "    'db_user' => '".addslashes($dbUser)."',\n"
+				. "    'db_pass' => '".addslashes($dbPass)."',\n"
+				. "    'db_name' => '".addslashes($dbName)."',\n"
+				. "    'domain' => '".addslashes($domain)."',\n"
+				. "    'domain_base64' => '".addslashes($domainBase64)."', // 域名base64编码\n"
+				. "    'debug' => '0' // 调试模式\n"
+				. ");\n";
 
-            if (!is_dir(__DIR__.'/config')) mkdir(__DIR__.'/config', 0755, true);
-            file_put_contents(__DIR__.'/config/config.php', $configContent);
+			if (!is_dir(__DIR__.'/config')) mkdir(__DIR__.'/config', 0755, true);
+			file_put_contents(__DIR__.'/config/config.php', $configContent);
 			
 			if (!is_dir("local_repo")) {mkdir("local_repo", 0755, true);}
             // 初始化完成后直接跳转 index.php

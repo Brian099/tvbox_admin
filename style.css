@@ -1,0 +1,181 @@
+/* 统一样式文件 - 现代化UI设计 */
+:root {
+    --primary-color: #3498db;
+    --primary-dark: #2980b9;
+    --secondary-color: #2c3e50;
+    --background-color: #f9fafc;
+    --surface-color: #ffffff;
+    --text-primary: #333333;
+    --text-secondary: #7f8c8d;
+    --border-color: #e1e8ed;
+    --hover-color: #ecf0f1;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --border-radius: 8px;
+    --shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Arial", sans-serif;
+    margin: 0;
+    background: var(--background-color);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* 布局容器 */
+.container {
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* 导航头部 */
+.nav-header {
+    background: var(--surface-color);
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    margin-bottom: 30px;
+}
+
+.nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+}
+
+/* 导航菜单 */
+.nav-menu {
+    display: flex;
+    gap: 5px;
+    list-style: none;
+}
+
+.nav-link {
+    text-decoration: none;
+    padding: 12px 24px;
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+    color: var(--text-secondary);
+    font-weight: 500;
+    position: relative;
+    border: 2px solid transparent;
+}
+
+.nav-link:hover {
+    background-color: var(--hover-color);
+    color: var(--primary-color);
+    transform: translateY(-1px);
+}
+
+.nav-link.active {
+    color: black;
+    font-weight: 600;
+}
+
+.nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 3px;
+    background: black;
+    border-radius: 2px;
+}
+
+/* 分隔线改进 */
+.nav-separator {
+    width: 1px;
+    background: var(--border-color);
+    margin: 0 5px;
+    align-self: stretch;
+}
+
+/* 页面标题 */
+.page-title {
+	display: none;
+    color: var(--secondary-color);
+    margin-bottom: 25px;
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    position: relative;
+}
+
+.page-title::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    margin: 10px auto;
+    border-radius: 2px;
+}
+
+/* 主要内容区域 */
+.main-content {
+    background: var(--surface-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    padding: 30px;
+    margin-bottom: 30px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+    
+    .nav-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .nav-menu {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .nav-link {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .page-title {
+        font-size: 1.6rem;
+    }
+    
+    .main-content {
+        padding: 20px;
+    }
+}
+
+/* 工具类 */
+.text-center { text-align: center; }
+.mb-20 { margin-bottom: 20px; }
+.mt-20 { margin-top: 20px; }
+.p-20 { padding: 20px; }
+
+/* 加载动画 */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

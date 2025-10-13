@@ -106,7 +106,7 @@ if ($serverFile !== '') {
             $existingNames[$name] = true;
             $result[] = [
                 'name' => $name,
-                'url'  => $baseUrl . '/vapi.php?server=' . urlencode($serverFile) . '&name=' . urlencode($name)
+                'url'  => $baseUrl . '/vapi.php?device_id=' . urlencode($deviceId) . '&name=' . urlencode($name)
             ];
         }
     }
@@ -148,7 +148,7 @@ if ($serverFile !== '') {
                     $existingNames[$parentName] = true;
                     $result[] = [
                         'name' => $parentName,
-                        'url'  => $baseUrl . '/vapi.php?server=' . urlencode($serverFile) . '&name=' . urlencode($parentName)
+                        'url'  => $baseUrl . '/vapi.php?device_id=' . urlencode($deviceId) . '&name=' . urlencode($parentName)
                     ];
                 }
             }
@@ -189,7 +189,13 @@ function obfuscate_payload($data) {
 	// $prefix = substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'), 0, 8);
 	$base64 = obfuscate_payload($data);
 	// echo $prefix . '**' . $base64;
-	echo $base64;
+	// 检查调试模式
+	$debugMode = isset($config['debug']) ? (int)$config['debug'] : 0;
+	if ($debugMode === 1) {
+		echo $data;
+	} else {
+		echo $base64;
+	}
     exit;
 } else {
     echo json_encode([
