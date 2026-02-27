@@ -59,27 +59,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['username'], $_POST['p
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-<meta charset="UTF-8">
-<title>登录</title>
-<style>
-body { font-family: "Segoe UI", Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background:#f9fafc; }
-.login-box { background: #fff; padding: 30px 50px; border-radius: 10px; box-shadow: 0 3px 12px rgba(0,0,0,0.15); }
-h2 { margin-bottom: 20px; color:#2c3e50; }
-input { display: block; padding: 10px; margin-bottom: 15px; width: 240px; border-radius: 6px; border:1px solid #ccc; box-sizing: border-box; }
-button { padding: 10px; width: 100%; background: #2196F3; color: #fff; border: none; border-radius:6px; cursor: pointer; font-size:15px; }
-button:hover { opacity:0.9; }
-.error { color: #f44336; margin-bottom: 10px; text-align:center; }
-</style>
+    <meta charset="UTF-8">
+    <title>登录 - 系统管理</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
-<div class="login-box">
-<div class="error"><?php echo htmlspecialchars($error); ?></div>
-<form method="post">
-<h2>管理页面登录</h2>
-<input type="text" name="username" placeholder="用户名" required>
-<input type="password" name="password" placeholder="密码" required>
-<button type="submit">登录</button>
-</form>
-</div>
+<body class="login-body">
+    <div class="login-box fade-in">
+        <h2 class="login-title">管理页面登录</h2>
+        
+        <?php if($error): ?>
+            <div class="login-error"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+        
+        <form method="post">
+            <div class="form-group">
+                <input type="text" name="username" class="form-input" placeholder="用户名" required>
+            </div>
+            <div class="form-group">
+                <input type="password" name="password" class="form-input" placeholder="密码" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">登录</button>
+        </form>
+    </div>
 </body>
 </html>

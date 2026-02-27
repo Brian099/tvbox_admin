@@ -2,9 +2,17 @@
 // 配置文件路径
 $configFile = __DIR__ . '/../config/config.php';
 
+// 计算基础URL
+$protocol = ( (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+            || (!empty($_SERVER['HTTP_FRONT_END_HTTPS']) && $_SERVER['HTTP_FRONT_END_HTTPS'] !== 'off')
+            ) ? 'https' : 'http';
+$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : ($_SERVER['SERVER_NAME'] ?? 'localhost');
+$baseUrl = $protocol . '://' . $host;
+
 if (!file_exists($configFile)) {
     die(json_encode([
-        'logo' => './emby.png',
+        'logo' => $baseUrl . '/emby/emby.png',
         'sites' => [],
         'error' => '未找到配置文件'
     ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
@@ -17,7 +25,7 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (Exception $e) {
     die(json_encode([
-        'logo' => './emby.png',
+        'logo' => $baseUrl . '/emby/emby.png',
         'sites' => [],
         'error' => '数据库连接失败: ' . $e->getMessage()
     ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
@@ -39,7 +47,7 @@ try {
                 "key" => "emby_" . strtolower($serverName),
                 "name" => $serverName,
                 "type" => 4,
-                "api" => "./emby.php?server=" . urlencode($serverName),
+                "api" => $baseUrl . "/emby/emby.php?server=" . urlencode($serverName),
                 "style" => [
                     "type" => "rect",
                     "ratio" => 1.33
@@ -51,7 +59,7 @@ try {
     }
     
     $output = [
-        "logo" => "./emby.png",
+        "logo" => $baseUrl . "/emby/emby.png",
         "sites" => $sites
     ];
     
@@ -61,7 +69,7 @@ try {
     
 } catch (Exception $e) {
     die(json_encode([
-        'logo' => './emby.png',
+        'logo' => $baseUrl . '/emby/emby.png',
         'sites' => [],
         'error' => '获取Emby配置失败: ' . $e->getMessage()
     ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));

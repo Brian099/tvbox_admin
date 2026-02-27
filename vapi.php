@@ -24,40 +24,83 @@ try {
     exit;
 }
 
-// 参数
-$device_id = isset($_GET['device_id']) ? trim($_GET['device_id']) : '';
-$name = isset($_GET['name']) ? trim($_GET['name']) : '';
-
-if ($device_id === '') {
-    http_response_code(400);
-    echo json_encode(['error'=>'缺少参数 device_id'], JSON_UNESCAPED_UNICODE);
-    exit;
+// 模式与参数
+$authMode = '0';
+try {
+    $col = $pdo->query("SHOW COLUMNS FROM setting LIKE 'AuthMode'")->fetch(PDO::FETCH_ASSOC);
+    if ($col) {
+        $row = $pdo->query("SELECT AuthMode FROM setting LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        if ($row && isset($row['AuthMode'])) { $authMode = (string)$row['AuthMode']; }
+    } else {
+        $authMode = isset($config['auth_mode']) ? (string)$config['auth_mode'] : '0';
+    }
+} catch (Exception $e) {
+    $authMode = isset($config['auth_mode']) ? (string)$config['auth_mode'] : '0';
 }
-
+$name = isset($_GET['name']) ? trim($_GET['name']) : '';
+$serverName = '';
+if ($authMode === '1') {
+    $deviceId = isset($_GET['device_id']) ? trim($_GET['device_id']) : '';
+    if ($deviceId === '') {
+        http_response_code(400);
+        echo json_encode(['error'=>'缺少参数 device_id'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $deviceNameParam = isset($_GET['device_name']) ? trim($_GET['device_name']) : '';
+    try {
+        $dc = $pdo->query("SHOW COLUMNS FROM devices LIKE 'device_name'")->fetch(PDO::FETCH_ASSOC);
+        if (!$dc) { $pdo->exec("ALTER TABLE devices ADD COLUMN device_name VARCHAR(255) DEFAULT NULL AFTER device_id"); }
+    } catch (Exception $e) {}
+    $stmt = $pdo->prepare("SELECT * FROM devices WHERE device_id = :device_id LIMIT 1");
+    $stmt->execute([':device_id' => $deviceId]);
+    $device = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($device) {
+        $sql = "UPDATE devices SET last_login = :last_login";
+        $params = [
+            ':last_login' => date('Y-m-d H:i:s'),
+            ':device_id'  => $deviceId
+        ];
+        if ($deviceNameParam !== '') {
+            $sql .= ", device_name = :device_name";
+            $params[':device_name'] = $deviceNameParam;
+        }
+        $sql .= " WHERE device_id = :device_id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+    } else {
+        $expireAt = date('Y-m-d', strtotime('+7 days'));
+        $stmt = $pdo->prepare("INSERT INTO devices (device_id, device_name, created_at, last_login, server, remark, expire_at) VALUES (:device_id, :device_name, :created_at, :last_login, '', '', :expire_at)");
+        $stmt->execute([
+            ':device_id'  => $deviceId,
+            ':device_name'=> $deviceNameParam !== '' ? $deviceNameParam : null,
+            ':created_at' => date('Y-m-d H:i:s'),
+            ':last_login' => date('Y-m-d H:i:s'),
+            ':expire_at'  => $expireAt
+        ]);
+        $device = ['server' => '', 'expire_at' => $expireAt];
+    }
+    if (!empty($device['expire_at']) && strtotime($device['expire_at']) < strtotime(date('Y-m-d'))) {
+        http_response_code(403);
+        echo json_encode(['error'=>'设备授权已过期'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $serverName = trim($device['server'] ?? '');
+    if ($serverName === '') {
+        http_response_code(403);
+        echo json_encode(['error'=>'设备未绑定分组'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+} else {
+    $serverName = isset($_GET['ServerName']) ? trim($_GET['ServerName']) : '';
+    if ($serverName === '') {
+        http_response_code(400);
+        echo json_encode(['error'=>'缺少参数 ServerName'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
 if ($name === '') {
     http_response_code(400);
     echo json_encode(['error'=>'缺少参数 name'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-// ===============================
-// 检查设备授权状态
-// ===============================
-$stmt = $pdo->prepare("SELECT server, expire_at FROM devices WHERE device_id = :device_id LIMIT 1");
-$stmt->execute([':device_id' => $device_id]);
-$device = $stmt->fetch(PDO::FETCH_ASSOC);
-
-if (!$device) {
-    http_response_code(403);
-    echo json_encode(['error'=>'设备未注册或不存在'], JSON_UNESCAPED_UNICODE);
-    exit;
-}
-
-// 检查设备是否过期
-$expire_at = $device['expire_at'];
-if ($expire_at && strtotime($expire_at) < time()) {
-    http_response_code(403);
-    echo json_encode(['error'=>'设备授权已过期'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -99,7 +142,7 @@ if ($repoUrl) {
 }
 
 // ===============================
-// 获取内容
+// 获取内容并处理相对路径
 // ===============================
 if ($isRemote) {
     // 第一次尝试获取内容
@@ -145,8 +188,77 @@ if ($isRemote) {
         header("Location: $url");
         exit;
     }
+    
+    // 处理远程源的相对路径
+    $baseRemoteUrl = preg_replace('#/[^/]*$#', '', $url); // 去掉最后一个/后面的内容，获取基础URL
+    
+    // 匹配多个可能的相对路径字段（只处理以 ./ 或 ../ 开头的路径）
+    $content = preg_replace_callback(
+        '/("(?:spider|jar|api|ext|json)"\s*:\s*")([^"]+)(")/i',
+        function($matches) use ($baseRemoteUrl) {
+            $relativePath = $matches[2];
+            // 如果不是以 http 开头，且以 ./ 或 ../ 开头，则补全为绝对路径
+            if (!preg_match('/^https?:\/\//', $relativePath) && preg_match('/^(\.\.?\/)/', $relativePath)) {
+                // 去掉开头的 ./ 
+                $relativePath = preg_replace('/^\.\//', '', $relativePath);
+                
+                // 确保 baseRemoteUrl 不以 / 结尾，relativePath 不以 / 开头
+                $baseRemoteUrl = rtrim($baseRemoteUrl, '/');
+                $relativePath = ltrim($relativePath, '/');
+                $fullPath = $baseRemoteUrl . '/' . $relativePath;
+                return $matches[1] . $fullPath . $matches[3];
+            }
+            // 如果已经是绝对路径或者是普通字符串（如 "csp_Config"），保持原样
+            return $matches[0];
+        },
+        $content
+    );
 } else {
     $content = file_get_contents($url);
+    
+    // 本地源的路径处理
+    if ($localRepoPath) {
+        // 计算基础URL
+        $protocol = ( (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                    || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                    || (!empty($_SERVER['HTTP_FRONT_END_HTTPS']) && $_SERVER['HTTP_FRONT_END_HTTPS'] !== 'off')
+                    ) ? 'https' : 'http';
+        $host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : ($_SERVER['SERVER_NAME'] ?? 'localhost');
+        $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+        $baseUrl = $protocol . '://' . $host . ($scriptDir === '' ? '' : $scriptDir);
+        
+        // 从 $localRepoPath 中提取目录路径（去掉文件名）
+        $directoryPath = dirname($localRepoPath);
+        
+        // 匹配多个可能的路径字段（只处理以 ./ 或 ../ 开头的路径）
+        $content = preg_replace_callback(
+            '/("(?:spider|jar|api|ext|json)"\s*:\s*")([^"]+)(")/i',
+            function($matches) use ($baseUrl, $directoryPath) {
+                $filePath = $matches[2];
+                
+                // 只处理以 ./ 或 ../ 开头的相对路径
+                if (preg_match('/^(\.\.?\/)/', $filePath)) {
+                    // 去掉开头的 ./
+                    $filePath = preg_replace('/^\.\//', '', $filePath);
+                    
+                    // 如果目录路径是 "." 或空，表示文件在根目录
+                    if ($directoryPath === '.' || $directoryPath === '') {
+                        $encodedPath = '';
+                    } else {
+                        $encodedPath = implode('/', array_map('rawurlencode', explode('/', $directoryPath))) . '/';
+                    }
+                    
+                    // 对文件路径进行编码（保留目录结构）
+                    $encodedFilePath = implode('/', array_map('rawurlencode', explode('/', $filePath)));
+                    
+                    return $matches[1] . "{$baseUrl}/local_repo/{$encodedPath}{$encodedFilePath}" . $matches[3];
+                }
+                // 如果不是相对路径（如 "csp_Config"），保持原样
+                return $matches[0];
+            },
+            $content
+        );
+    }
 }
 
 // 去掉单行注释（//）和多行注释（/* ... */）
@@ -155,24 +267,6 @@ $content = preg_replace('/\/\*.*?\*\//s', '', $content);
 
 // 去掉 UTF-8 BOM
 $content = preg_replace('/^\x{FEFF}/u', '', $content);
-
-// ===============================
-// 本地源 spider 路径替换
-// ===============================
-if (!$isRemote && $localRepoPath) {
-    // 假设域名和端口由配置文件提供
-    $baseUrl = rtrim($config['domain'], '/'); 
-    // 替换 spider 路径
-    $content = preg_replace_callback(
-        '/("spider"\s*:\s*")([^"]+)(")/i',
-        function($matches) use ($baseUrl, $localRepoPath) {
-            $filename = basename($matches[2]);
-            $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localRepoPath)));
-            return $matches[1] . "{$baseUrl}/local_repo/{$encodedPath}/{$filename}" . $matches[3];
-        },
-        $content
-    );
-}
 
 // 解析 JSON
 $data = json_decode($content, true);
@@ -183,11 +277,88 @@ if ($data === null) {
 }
 
 // ===============================
+// 获取并合并激活的片段数据
+// ===============================
+$snippetDir = __DIR__ . '/snippet';
+$enabledSnippets = [];
+
+// 计算基础URL（移到外部以供后续使用）
+$protocol = ( (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+            || (!empty($_SERVER['HTTP_FRONT_END_HTTPS']) && $_SERVER['HTTP_FRONT_END_HTTPS'] !== 'off')
+            ) ? 'https' : 'http';
+$host = isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : ($_SERVER['SERVER_NAME'] ?? 'localhost');
+$scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+$baseUrl = $protocol . '://' . $host . ($scriptDir === '' ? '' : $scriptDir);
+
+if (is_dir($snippetDir)) {
+    $items = scandir($snippetDir);
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..') continue;
+        
+        $snippetItemDir = $snippetDir . '/' . $item;
+        if (!is_dir($snippetItemDir)) continue;
+        
+        // 检查是否有 enable 文件
+        $enableFile = $snippetItemDir . '/enable';
+        if (!file_exists($enableFile)) continue;
+        
+        // 查找 JSON 文件
+        $jsonFile = null;
+        $jsFile = null;
+        $files = scandir($snippetItemDir);
+        foreach ($files as $file) {
+            if ($file === '.' || $file === '..' || $file === 'enable') continue;
+            
+            $ext = pathinfo($file, PATHINFO_EXTENSION);
+            if ($ext === 'json') {
+                $jsonFile = $file;
+            } elseif ($ext === 'js') {
+                $jsFile = $file;
+            }
+        }
+        
+        if ($jsonFile && $jsFile) {
+            $enabledSnippets[] = [
+                'name' => $item,
+                'json_file' => $jsonFile,
+                'js_file' => $jsFile,
+                'directory' => $snippetItemDir
+            ];
+        }
+    }
+}
+
+// 处理并合并激活的片段
+if (!empty($enabledSnippets)) {
+    // 确保主数据中有 sites 数组
+    if (!isset($data['sites']) || !is_array($data['sites'])) {
+        $data['sites'] = [];
+    }
+    
+    foreach ($enabledSnippets as $snippet) {
+        $jsonFilePath = $snippet['directory'] . '/' . $snippet['json_file'];
+        if (file_exists($jsonFilePath)) {
+            $snippetContent = file_get_contents($jsonFilePath);
+            $snippetData = json_decode($snippetContent, true);
+            
+            if ($snippetData !== null && is_array($snippetData)) {
+                // 处理片段中的相对路径
+                $processedSnippetData = processSnippetPaths($snippetData, $baseUrl, $snippet['name'], $snippet['js_file']);
+                
+                // 直接添加到 sites 数组
+                $data['sites'][] = $processedSnippetData;
+            }
+        }
+    }
+}
+
+// ===============================
 // 获取并合并 Emby 站点数据
 // ===============================
 $embySitesData = [];
 try {
-    $embySitesUrl = $config['domain'] . '/emby/emby_sites.php';
+    $embySitesUrl = $baseUrl . '/emby/emby_api.php';
     $embyContent = @file_get_contents($embySitesUrl, false, stream_context_create([
         'http' => ['timeout' => 5]
     ]));
@@ -220,19 +391,26 @@ if (!empty($embySitesData) && isset($embySitesData['sites']) && is_array($embySi
 // ===============================
 $attachLive = 0; // 默认不附加
 $stmt = $pdo->prepare("SELECT attach_live FROM duocang_data WHERE ServerName=:ServerName LIMIT 1");
-$stmt->execute([':ServerName' => $name]);
+$stmt->execute([':ServerName' => $serverName]);
 $attachLiveValue = $stmt->fetchColumn();
 if ($attachLiveValue !== false) {
     $attachLive = (int)$attachLiveValue;
 }
 
-$replace = 0; // 1=替换，0=附加
+// 从数据库读取直播源处理方式
+$live_merge_method = 'merge'; // 默认值
+$stmt = $pdo->query("SELECT LiveMergeMethod FROM setting LIMIT 1");
+$result = $stmt->fetch(PDO::FETCH_ASSOC);
+if ($result && isset($result['LiveMergeMethod'])) {
+    $live_merge_method = $result['LiveMergeMethod'];
+}
+
 if ($attachLive) {
     $stmt = $pdo->query("SELECT name, url, ua FROM lives ORDER BY id ASC");
     $liveSources = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (!empty($liveSources)) {
-        if ($replace === 1) {
+        if ($live_merge_method === 'replace') {
             $data['lives'] = [];
         } elseif (!isset($data['lives']) || !is_array($data['lives'])) {
             $data['lives'] = [];
@@ -245,28 +423,43 @@ if ($attachLive) {
                 'ua'   => $live['ua']
             ];
         }
-    } elseif ($replace === 1) {
+    } elseif ($live_merge_method === 'replace') {
         unset($data['lives']);
     }
-}
-
-// ===============================
-// 检测调试模式和UA
-// ===============================
-$debugMode = isset($config['debug']) ? (int)$config['debug'] : 0;
-$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
-
-// 如果调试模式关闭且UA中不包含okhttp，则输出提示文字
-if ($debugMode === 0 && stripos($userAgent, 'okhttp') === false) {
-    $message = "请使用官方APP访问本接口，禁止直接通过浏览器访问。";
-    
-    // 可以选择输出纯文本或JSON格式的错误信息
-    header('Content-Type: text/plain; charset=utf-8');
-    echo $message;
-    exit;
 }
 
 // 输出 JSON
 echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 exit;
+
+/**
+ * 处理片段中的路径，将相对路径转换为绝对路径
+ */
+function processSnippetPaths($snippetData, $baseUrl, $snippetName, $jsFileName) {
+    if (is_array($snippetData)) {
+        foreach ($snippetData as $key => $value) {
+            if (is_array($value)) {
+                $snippetData[$key] = processSnippetPaths($value, $baseUrl, $snippetName, $jsFileName);
+            } elseif ($key === 'api' && is_string($value)) {
+                // 处理 api 字段中的相对路径
+                if (preg_match('/^(\.\.?\/)/', $value)) {
+                    // 去掉开头的 ./
+                    $relativePath = preg_replace('/^\.\//', '', $value);
+                    // 构建绝对路径
+                    $snippetData[$key] = $baseUrl . '/snippet/' . rawurlencode($snippetName) . '/' . rawurlencode($relativePath);
+                } elseif ($value === $jsFileName) {
+                    // 如果 api 字段直接是 JS 文件名，也转换为绝对路径
+                    $snippetData[$key] = $baseUrl . '/snippet/' . rawurlencode($snippetName) . '/' . rawurlencode($jsFileName);
+                }
+            } elseif (in_array($key, ['spider', 'jar', 'ext', 'json']) && is_string($value)) {
+                // 处理其他可能的路径字段
+                if (preg_match('/^(\.\.?\/)/', $value)) {
+                    $relativePath = preg_replace('/^\.\//', '', $value);
+                    $snippetData[$key] = $baseUrl . '/snippet/' . rawurlencode($snippetName) . '/' . rawurlencode($relativePath);
+                }
+            }
+        }
+    }
+    return $snippetData;
+}
 ?>

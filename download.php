@@ -1,27 +1,76 @@
 <?php
-// 定义APK文件信息
-$apk_files = [
-    [
-        'name' => '电视端V8a',
-        'filename' => 'leanback-arm64_v8a-release.apk',
-        'path' => 'APKs/leanback-arm64_v8a-release.apk'
-    ],
-    [
-        'name' => '电视端V7a',
-        'filename' => 'leanback-armeabi_v7a-release.apk',
-        'path' => 'APKs/leanback-armeabi_v7a-release.apk'
-    ],
-    [
-        'name' => '手机端V8a',
-        'filename' => 'mobile-arm64_v8a-release.apk',
-        'path' => 'APKs/mobile-arm64_v8a-release.apk'
-    ],
-    [
-        'name' => '手机端V7a',
-        'filename' => 'mobile-armeabi_v7a-release.apk',
-        'path' => 'APKs/mobile-armeabi_v7a-release.apk'
-    ]
-];
+// 获取APK目录中的所有文件
+$apk_dir = 'APKs';
+$apk_files = [];
+
+// 检查APK目录是否存在
+if (is_dir($apk_dir)) {
+    // 扫描目录中的所有文件
+    $files = scandir($apk_dir);
+    
+    foreach ($files as $file) {
+        // 跳过 . 和 .. 目录，以及非APK文件
+        if ($file === '.' || $file === '..') continue;
+        
+        $file_path = $apk_dir . '/' . $file;
+        $file_ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+        
+        // 只处理APK文件
+        if ($file_ext === 'apk' && is_file($file_path)) {
+            // 根据文件名自动识别类型
+            $name = getApkDisplayName($file);
+            
+            $apk_files[] = [
+                'name' => $name,
+                'filename' => $file,
+                'path' => $file_path,
+                'raw_name' => $file // 保存原始文件名用于排序
+            ];
+        }
+    }
+    
+    // 按名称排序APK文件
+    usort($apk_files, function($a, $b) {
+        return strcmp($a['raw_name'], $b['raw_name']);
+    });
+}
+
+// 根据文件名自动生成显示名称
+function getApkDisplayName($filename) {
+    $name = pathinfo($filename, PATHINFO_FILENAME);
+    
+    // 定义关键词映射
+    $keywords = [
+        'leanback' => '电视端',
+        'mobile' => '手机端',
+        'arm64_v8a' => 'V8a',
+        'armeabi_v7a' => 'V7a',
+        'x86' => 'x86',
+        'x86_64' => 'x64',
+        'release' => '正式版',
+        'debug' => '调试版',
+        'beta' => '测试版',
+        'alpha' => '内测版'
+    ];
+    
+    // 替换关键词
+    foreach ($keywords as $key => $value) {
+        $name = str_replace($key, $value, $name);
+    }
+    
+    // 清理多余的下划线和连字符
+    $name = preg_replace('/[_-]+/', ' ', $name);
+    $name = trim($name);
+    
+    // 如果名称太短或没有识别出类型，使用文件名
+    if (strlen($name) < 3 || 
+        (strpos($name, '电视端') === false && 
+         strpos($name, '手机端') === false)) {
+        $name = pathinfo($filename, PATHINFO_FILENAME);
+    }
+    
+    return $name;
+}
 
 // 获取文件大小和修改时间
 foreach ($apk_files as &$file) {
@@ -99,6 +148,15 @@ function formatTime($timestamp) {
             font-size: 1.2rem;
             max-width: 600px;
             margin: 0 auto;
+        }
+        
+        .stats {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px auto;
+            max-width: 500px;
+            font-size: 1rem;
         }
         
         .download-grid {
@@ -200,6 +258,21 @@ function formatTime($timestamp) {
             margin-top: 10px;
         }
         
+        .empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            color: #7f8c8d;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
         footer {
             text-align: center;
             margin-top: 50px;
@@ -239,46 +312,64 @@ function formatTime($timestamp) {
     <div class="container">
         <header>
             <h1>APK文件下载中心</h1>
-            <p class="description">选择适合您设备的版本进行下载，请确保下载正确的架构版本</p>
-			<p class="description">一般都是使用V8a版本的，如果机型较老安装V8a失败可以尝试V7a</p>
+            <p class="description">选择适合您设备的版本进行下载，系统自动检测APK目录中的所有文件</p>
+            <p class="description">一般都是使用V8a版本的，如果机型较老安装V8a失败可以尝试V7a</p>
+            
+            <?php if (!empty($apk_files)): ?>
+                <div class="stats">
+                    共找到 <strong><?php echo count($apk_files); ?></strong> 个APK文件 | 
+                    最后更新: <?php echo date('Y-m-d H:i:s'); ?>
+                </div>
+            <?php endif; ?>
         </header>
         
         <div class="download-grid">
-            <?php foreach ($apk_files as $file): ?>
-            <div class="download-card">
-                <div class="card-header">
-                    <h2><?php echo htmlspecialchars($file['name']); ?></h2>
-                </div>
-                <div class="card-body">
-                    <div class="file-info">
-                        <div class="info-item">
-                            <span class="info-label">文件名称:</span>
-                            <span class="info-value"><?php echo htmlspecialchars($file['filename']); ?></span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">文件大小:</span>
-                            <span class="info-value"><?php echo formatSize($file['size']); ?></span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">更新时间:</span>
-                            <span class="info-value"><?php echo formatTime($file['time']); ?></span>
-                        </div>
+            <?php if (!empty($apk_files)): ?>
+                <?php foreach ($apk_files as $file): ?>
+                <div class="download-card">
+                    <div class="card-header">
+                        <h2><?php echo htmlspecialchars($file['name']); ?></h2>
                     </div>
-                    
-                    <?php if ($file['exists']): ?>
-                        <a href="<?php echo $file['path']; ?>" class="download-btn" download>下载APK</a>
-                    <?php else: ?>
-                        <button class="download-btn" disabled>文件不存在</button>
-                        <p class="file-missing">该文件暂时不可用</p>
-                    <?php endif; ?>
+                    <div class="card-body">
+                        <div class="file-info">
+                            <div class="info-item">
+                                <span class="info-label">文件名称:</span>
+                                <span class="info-value"><?php echo htmlspecialchars($file['filename']); ?></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">文件大小:</span>
+                                <span class="info-value"><?php echo formatSize($file['size']); ?></span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">更新时间:</span>
+                                <span class="info-value"><?php echo formatTime($file['time']); ?></span>
+                            </div>
+                        </div>
+                        
+                        <?php if ($file['exists']): ?>
+                            <a href="<?php echo $file['path']; ?>" class="download-btn" download>
+                                📥 下载APK
+                            </a>
+                        <?php else: ?>
+                            <button class="download-btn" disabled>文件不存在</button>
+                            <p class="file-missing">该文件暂时不可用</p>
+                        <?php endif; ?>
+                    </div>
                 </div>
-            </div>
-            <?php endforeach; ?>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="empty-state">
+                    <div>📁</div>
+                    <h3>未找到APK文件</h3>
+                    <p>请在网站根目录创建 <code>APKs</code> 文件夹，并将APK文件放入其中</p>
+                    <p>当前检测的目录: <code><?php echo realpath($apk_dir); ?></code></p>
+                </div>
+            <?php endif; ?>
         </div>
         
         <footer>
             <p>© <?php echo date('Y'); ?> APK下载页面 - 所有版本仅供参考</p>
-            <p>页面最后更新于: <?php echo date('Y-m-d H:i:s'); ?></p>
+            <p>页面自动更新 | 检测时间: <?php echo date('Y-m-d H:i:s'); ?></p>
         </footer>
     </div>
 </body>

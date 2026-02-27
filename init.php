@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 CREATE TABLE IF NOT EXISTS devices (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     device_id VARCHAR(255) NOT NULL UNIQUE,
+                    device_name VARCHAR(255) DEFAULT NULL,
                     server VARCHAR(255) DEFAULT NULL,
                     expire_at DATE DEFAULT NULL,
                     remark VARCHAR(255) DEFAULT NULL,
@@ -121,26 +122,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 				created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 			");
+			
+			$pdo->exec("
+			CREATE TABLE setting (
+				id INT AUTO_INCREMENT PRIMARY KEY,
+				LiveMergeMethod VARCHAR(255) NOT NULL,
+				AuthMode VARCHAR(10) NOT NULL DEFAULT '0'
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+			");
 
             // 插入初始管理员
             $passwordHash = password_hash($adminPass, PASSWORD_BCRYPT);
             $stmt = $pdo->prepare("INSERT INTO users (username, password) VALUES (:username, :password)");
             $stmt->execute(array(':username'=>$adminUser, ':password'=>$passwordHash));
+			
+			// 插入设置默认值
+			$pdo->exec("INSERT INTO setting (LiveMergeMethod, AuthMode) VALUES ('merge','0')");
 
-         // 写入 config 文件 - 新增域名base64编码
-			$domainBase64 = base64_encode($domain);
+            // 写入 config 文件 - 移除调试模式配置
 			$configContent = "<?php\nreturn array(\n"
 				. "    'db_host' => '".addslashes($dbHost)."',\n"
 				. "    'db_user' => '".addslashes($dbUser)."',\n"
 				. "    'db_pass' => '".addslashes($dbPass)."',\n"
 				. "    'db_name' => '".addslashes($dbName)."',\n"
 				. "    'domain' => '".addslashes($domain)."',\n"
-				. "    'domain_base64' => '".addslashes($domainBase64)."', // 域名base64编码\n"
-				. "    'debug' => '0' // 调试模式\n"
+				. "    'auth_mode' => '0'\n"
 				. ");\n";
 
 			if (!is_dir(__DIR__.'/config')) mkdir(__DIR__.'/config', 0755, true);
 			file_put_contents(__DIR__.'/config/config.php', $configContent);
+			
+			if (!is_dir(__DIR__.'/APKs')) mkdir(__DIR__.'/APKs', 0755, true);
+			if (!is_dir(__DIR__.'/snippet')) mkdir(__DIR__.'/snippet', 0755, true);
+			if (!is_dir(__DIR__.'/local_repo')) mkdir(__DIR__.'/local_repo', 0755, true);
 			
 			if (!is_dir("local_repo")) {mkdir("local_repo", 0755, true);}
             // 初始化完成后直接跳转 index.php
