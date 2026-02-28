@@ -21,3 +21,7 @@ a source and user manage system for customized Tvbox
 
 app修改方式，搜索http://192.168.1.249:1666，有三个位置需要修改，改为自己的域名
 
+后台tvbox_admin 项目地址：[Brian099/tvbox_admin: a source and user manage system for customized Tvbox](https://github.com/Brian099/tvbox_admin)
+
+APP Fongmi_tvbox（魔改授权）项目地址 [Brian099/FongMiTV: tvbox APP](https://github.com/Brian099/FongMiTV)
+

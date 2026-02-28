@@ -1,0 +1,5 @@
+{
+  "code": 521,
+  "name": "5.2.1",
+  "desc": "* 支持 rmvb\n* 優化 hls drm\n* 優化 srt 解析"
+}
