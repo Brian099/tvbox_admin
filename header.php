@@ -20,8 +20,8 @@
 						<li class="nav-separator"></li>
                         <?php if($authMode==='1'): ?>
                         <li><a href="devices.php" class="nav-link" id="link-devices">设备</a></li>
-                        <?php endif; ?>
                         <li class="nav-separator"></li>
+                        <?php endif; ?>
                         <li><a href="settings.php" class="nav-link" id="link-settings">设置</a></li>
                         <li class="nav-separator"></li>
                         <li><a href="download.php" class="nav-link" id="link-download" target="_blank">下载应用</a></li>

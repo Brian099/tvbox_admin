@@ -66,9 +66,25 @@ $repoStats = $stmt->fetch(PDO::FETCH_ASSOC);
 $stmt = $pdo->query("SELECT COUNT(*) as total FROM lives");
 $liveStats = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// 4. 本地文件统计
-$stmt = $pdo->query("SELECT COUNT(*) as total FROM local_files");
-$localFileStats = $stmt->fetch(PDO::FETCH_ASSOC);
+// 4. 本地仓统计（优先统计已解析出的本地源，其次统计配置的本地文件名）
+$localStats = ['total' => 0];
+try {
+    $tableExists = $pdo->query("SHOW TABLES LIKE 'local_repos'")->fetch();
+    if ($tableExists) {
+        $stmt = $pdo->query("SELECT COUNT(DISTINCT name) as total FROM local_repos");
+        $localStats = $stmt->fetch(PDO::FETCH_ASSOC);
+    } else {
+        $stmt = $pdo->query("SELECT COUNT(*) as total FROM local_files");
+        $localStats = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+} catch (Exception $e) {
+    try {
+        $stmt = $pdo->query("SELECT COUNT(*) as total FROM local_files");
+        $localStats = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e2) {
+        $localStats = ['total' => 0];
+    }
+}
 
 // 5. Emby配置统计
 $stmt = $pdo->query("SELECT COUNT(*) as total FROM emby");
@@ -119,7 +135,7 @@ $systemInfo = [
             <div class="dashboard-section">
                 <h2 class="section-title">📊 核心统计</h2>
                 <div class="stats-grid">
-                    <div class="stat-card" onclick="location.href='duocang.php'">
+                    <div class="stat-card" onclick="location.href='edit_repo_group.php'">
                         <div class="stat-number"><?= $groupStats['total'] ?? 0 ?></div>
                         <div class="stat-label">多仓分组</div>
                         <div class="stat-subtext">
@@ -128,25 +144,25 @@ $systemInfo = [
                         </div>
                     </div>
                     
-                    <div class="stat-card info" onclick="location.href='repo.php'">
+                    <div class="stat-card info" onclick="location.href='edit_repos.php'">
                         <div class="stat-number"><?= $repoStats['total'] ?? 0 ?></div>
                         <div class="stat-label">远程仓库</div>
                         <div class="stat-subtext">可用的数据源</div>
                     </div>
                     
-                    <div class="stat-card purple" onclick="location.href='live.php'">
+                    <div class="stat-card purple" onclick="location.href='edit_lives.php'">
                         <div class="stat-number"><?= $liveStats['total'] ?? 0 ?></div>
                         <div class="stat-label">直播源</div>
                         <div class="stat-subtext">直播频道配置</div>
                     </div>
                     
-                    <div class="stat-card orange" onclick="location.href='local.php'">
-                        <div class="stat-number"><?= $localFileStats['total'] ?? 0 ?></div>
-                        <div class="stat-label">本地文件</div>
-                        <div class="stat-subtext">本地资源文件</div>
+                    <div class="stat-card orange" onclick="location.href='local_repo.php'">
+                        <div class="stat-number"><?= $localStats['total'] ?? 0 ?></div>
+                        <div class="stat-label">本地仓</div>
+                        <div class="stat-subtext">已解析的本地源</div>
                     </div>
                     
-                    <div class="stat-card teal" onclick="location.href='emby.php'">
+                    <div class="stat-card teal" onclick="location.href='edit_emby.php'">
                         <div class="stat-number"><?= $embyStats['total'] ?? 0 ?></div>
                         <div class="stat-label">Emby配置</div>
                         <div class="stat-subtext">媒体服务器配置</div>
